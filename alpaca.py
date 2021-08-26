@@ -68,39 +68,3 @@ def getFiveYearHistorical(api,symbol):
     historical_final = historical_final.reset_index(drop=True)
     
     return historical_final
-
-
-    
-    
-    
-    
-    
-    
-    
-    
-            
-    
-    
-        
-        
-        
-    
-
-    
-    
-    
-    
-    
-    
-
-    
-
-
-    
-
-    
-    
-        
-    
-    
-    
