@@ -1,7 +1,7 @@
 import sqlite3
 import alpaca
 import tqdm
-
+import pandas as pd
 
 # Gets connection to Historical DB. If DB does not exist, greates DB.
 
@@ -29,7 +29,7 @@ def populateHistorical():
     for a in assets:
         cursor.execute('INSERT INTO Assets (asset) VALUES (?)',[a])
         
-    for i in tqdm.tqdm(range(len(assets)),desc='retrieving 5-year historical data.'):
+    for i in tqdm.tqdm(range(len(assets)),desc='Retrieving 5-year historical data'):
         
         try: 
         
@@ -52,21 +52,31 @@ def populateHistorical():
     conn.commit()
     conn.close()
     
+# Validate that all assets in DB are tradable.
 
+def validateAssets():
     
-#def validateAssets():
+    conn = sqlite3.connect('llama.db')
     
+    cursor = conn.cursor()
     
-
+    dbAssets = pd.read_sql('SELECT * FROM Assets',conn)
     
+    api = alpaca.getAPI()    
+    tradable = alpaca.getAssets(api)
+    
+    for i in tdqm.tdqm(range(len(dbAssets)),desc='Validating asset tradability'):
         
-        
-        
-
-
+        if dbAssets.iloc[i]['asset'] not in tradable:
+            
+            print('Discovered non-tradable asset: {}'.format(dbAssets.iloc[i]['asset']))
+            print('Deleting from database.')
+            
+            cursor.execute('DELETE FROM Assets WHERE asset = {};'.format(dbAssets.iloc[i]['asset']))
+            
+            cursor.execute('DROP TABLE IF EXISTS {};'.format(dbAssets.iloc[i]['asset']))
+            
+    conn.commit()
+    conn.close()
     
-    
-    
-    
-    
-    
+    print('All assets in database are tradable.')
