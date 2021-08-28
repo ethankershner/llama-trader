@@ -28,6 +28,8 @@ def getAssets(api):
             
             assets_viable.append(getattr(a,'symbol'))
             
+    return assets_viable
+            
 # Format date for input to Alpaca API
     
 def formatDate(date):

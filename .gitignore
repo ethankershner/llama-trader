@@ -1,2 +1,5 @@
 
 *.key
+*.db
+*.db-journal
+*.pyc
