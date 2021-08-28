@@ -80,3 +80,45 @@ def validateAssets():
     conn.close()
     
     print('All assets in database are tradable.')
+    
+# Get a list of assets from the DB.
+    
+def getAssets():
+    
+    conn = sqlite3.connect('llama.db')
+    
+    assets = pd.read_sql('SELECT * FROM Assets', conn)
+    
+    conn.close()
+    
+    return assets
+
+# Retrieves historical data for an asset from the DB.
+    
+def getHistorical(symbol):
+    
+    conn = getConn()
+    
+    historical = pd.read_sql('SELECT * FROM {}'.format(symbol),conn)
+    
+    conn.close()
+    
+    return historical
+
+
+    
+
+    
+    
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
