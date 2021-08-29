@@ -2,6 +2,7 @@ import sqlite3
 import alpaca
 import tqdm
 import pandas as pd
+from datetime import date
 
 # Gets connection to Historical DB. If DB does not exist, greates DB.
 
@@ -21,19 +22,20 @@ def populateHistorical():
     
     assets = alpaca.getAssets(api)
     
+    today = str(date.today())
+    
     # Create table to store asset list
     
-    cursor.execute('CREATE TABLE IF NOT EXISTS Assets (asset nvarchar(50))')
+    cursor.execute('CREATE TABLE IF NOT EXISTS Assets (asset nvarchar(50), last_updated nvarchar(50))')
     cursor.execute('DELETE FROM Assets;')
-                   
-    for a in assets:
-        cursor.execute('INSERT INTO Assets (asset) VALUES (?)',[a])
         
     for i in tqdm.tqdm(range(len(assets)),desc='Retrieving 5-year historical data'):
         
         try: 
         
             historical = alpaca.getFiveYearHistorical(api,assets[i])
+            
+            cursor.execute('INSERT INTO Assets (asset,last_updated) VALUES (?,?)',[assets[i],today])
         
             cursor.execute('CREATE TABLE IF NOT EXISTS {} (timestamp nvarchar(50), open real, high real, low real, close real, volume int, trade_count int, vwap real)'.format(assets[i]))
             
@@ -46,7 +48,7 @@ def populateHistorical():
                 cursor.execute('INSERT INTO {} (timestamp, open, high, low, close, volume, trade_count, vwap) VALUES (?,?,?,?,?,?,?,?)'.format(assets[i]),[str(t.timestamp),t.open,t.high,t.low,t.close,t.volume,t.trade_count,t.vwap])
                 
         except:
-            
+                        
             pass
           
     conn.commit()
@@ -105,20 +107,24 @@ def getHistorical(symbol):
     
     return historical
 
-
+def recordPerformance(results):
     
-
+    conn = getConn()
+    cursor = conn.cursor()
     
+    cursor.execute('CREATE TABLE IF NOT EXISTS Model_Performance (symbol nvarchar(50), sample int, historical_Length nvarchar(50), memory int, memory_features nvarchar(50), eval_period nvarchar(50), eval_n int, train_n int, precision real)')
     
+    memory_features = ''
     
+    for f in results['memory_features']:
+        
+        if memory_features == '':
+            memory_features = memory_features + f
+        else:
+            memory_features = memory_features + '|' + f
+            
+    cursor.execute('INSERT INTO Model_Performance (symbol, sample, historical_length, memory, memory_features,eval_period, eval_n, train_n, precision) VALUES (?,?,?,?,?,?,?,?,?)',
+                   [results['symbol'],results['sample'],results['historical_length'],results['memory'],memory_features,results['eval_period'],results['eval_n'],results['train_n'],results['precision']])
     
-
-    
-
-    
-    
-    
-    
-    
-    
-    
+    conn.commit()
+    conn.close()

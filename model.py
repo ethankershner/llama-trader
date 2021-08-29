@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import precision_score
+import tqdm
 
 
 '''
@@ -21,7 +22,7 @@ Dataset parameters to test:
     
 '''
 
-def makeDataset(symbol,sample=1,historical_length='5Y',memory=0,memory_features=[]):
+def makeDataset(symbol,sample,historical_length,memory,memory_features):
     
     historical = dbmanager.getHistorical(symbol)
     historical['timestamp'] = pd.to_datetime(historical['timestamp'])
@@ -63,11 +64,13 @@ def makeDataset(symbol,sample=1,historical_length='5Y',memory=0,memory_features=
     return historical
     
     
-def evaluateModel(dataset):
+def evaluateModel(symbol,sample=1,historical_length='6M',memory=0,memory_features=['close','volume'],model=GradientBoostingClassifier(),evalperiod='1M'):
     
-    # Test set: Last three months
+    dataset = makeDataset(symbol,sample,historical_length,memory,memory_features)
     
-    test = dataset.last('1M').reset_index(drop=True)
+    # Test set: Last month
+    
+    test = dataset.last(evalperiod).reset_index(drop=True)
     
     # Training set: All prior data
     
@@ -79,14 +82,50 @@ def evaluateModel(dataset):
     X_Test = test.drop(columns = ['Future_Price_Change'])
     Y_Test = test['Future_Price_Change']
     
-    gb = RandomForestClassifier()
+    model.fit(X_Train,Y_Train)
     
-    gb.fit(X_Train,Y_Train)
-    
-    pred = gb.predict_proba(X_Test)[:,1]
-    
-    roc_auc_score(Y_Test,pred)
+    pred = model.predict(X_Test)
+    pred_prob = model.predict_proba(X_Test)[:,1]
     
     eval_df = pd.DataFrame()
     eval_df['pred'] = pred
+    eval_df['pred_prob'] = pred_prob
     eval_df['target'] = Y_Test
+    
+    # Model precision
+    precision = round(precision_score(eval_df['target'],eval_df['pred']),3)
+    
+    results = {'symbol':symbol,
+               'sample':sample,
+               'historical_length':historical_length,
+               'memory':memory,
+               'memory_features':memory_features,
+               'model':type(model).__name__,
+               'eval_period':eval_period,
+               'eval_n':len(eval_df),
+               'train_n':len(X_Train),
+               'precision':precision}
+
+    return results
+
+# Test all assets using default model evaluation parameters
+
+def testDefault():
+    
+    assets = dbmanager.getAssets()
+    
+    for i in tqdm.tqdm(range(len(assets)),desc='Testing all asset models using default params'):
+        
+        symbol = assets.iloc[i].asset
+        last_updated = assets.iloc[i].last_updated
+        
+        results = evaluateModel(a)
+        results['last_updated'] = last_updated
+        
+        dbmanager.recordPerformance(results)
+        
+# Test all assets over a range of parameters. If a constant value is entered, holds this value constant during tests. Otherwise, uses default params.
+        
+def testRange(sample=[],historical_length=[],memory=[],memory_features=[],model=[],evalperiod=[]):
+    
+    print('placeholder')
